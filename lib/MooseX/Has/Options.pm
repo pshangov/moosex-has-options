@@ -79,13 +79,13 @@ sub _expand_options
 
 =head1 DESCRIPTION
 
-This module provides a succint syntax for declaring options for L<Moose> attributes. It hijacks the C<has> function imported by L<Moose> and replaces it with one that understands the options syntax described above.
+This module provides a succinct syntax for declaring options for L<Moose> attributes. It hijacks the C<has> function imported by L<Moose> and replaces it with one that understands the options syntax described above.
 
 =head1 USAGE
 
 =head2 Declaring options
 
-MooseX::Has::Params works by checking the arguments to C<has> for strings that look like options, i.e. alphanumercic strings preceded by a colon, and replaces them with a hash whose keys are the names of the options (sans the colon) and the values are C<1>'s. Thus, 
+MooseX::Has::Params works by checking the arguments to C<has> for strings that look like options, i.e. alphanumeric strings preceded by a colon, and replaces them with a hash whose keys are the names of the options (sans the colon) and the values are C<1>'s. Thus, 
 
     has 'some_attribute', ':required';
 
