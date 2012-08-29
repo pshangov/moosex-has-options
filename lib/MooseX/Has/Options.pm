@@ -5,55 +5,45 @@ package MooseX::Has::Options;
 use strict;
 use warnings;
 
-use Package::Stash ();
-use Carp           ();
+use Moose::Util;
+use Class::Load;
+use String::RewritePrefix;
+use MooseX::Role::OptionShortcuts;
 
 sub import
 {
-    my ($class, @keywords) = @_;
-    @keywords = 'has' unless @keywords;
-    my $stash = Package::Stash->new(scalar caller());
+    my $class  = shift;
+    my $caller = caller;
 
-    foreach my $keyword (@keywords)
-    {
-        if ($stash->has_symbol("&$keyword"))
-        {
-            my $orig = $stash->get_symbol("&$keyword");
-            $stash->add_symbol("&$keyword", sub { $orig->(_expand_options($keyword, @_)) });
-        }
-        else
-        {
-            Carp::carp "Cannot add options for $keyword, no subroutine found in caller package";
-        }
-    }
+    $class->import_into($caller, @_);
 }
 
-sub _expand_options
+sub import_into
 {
-    my $keyword = shift;
-    my $name = shift;
+    my $class = shift;
+    my $into  = shift;
 
-    my %expanded;
+    # expand import arguments to full class names
+    my @handler_classes = String::RewritePrefix->rewrite(
+        { '' => 'MooseX::Has::Options::Handler::', '+' => '' }, 
+        'Accessors', @_
+    ); 
 
-    foreach my $option (@_)
-    {
-        if ( $keyword eq 'has' and $option =~ /^:(ro|rw|bare)$/ )
-        {
-            $expanded{is} = $1;
-        }
-        elsif ( $option =~ /^:(\w+)$/ )
-        {
-            $expanded{$1} = 1;
-        }
-        else
-        {
-            last;
-        }
-    }
+    # require each class and get its handlers
+    my %handlers = map {
+        Class::Load::load_class($_);
+        $_->handles;
+    } @handler_classes;
 
-    splice @_, 0, scalar keys %expanded;
+    # create a parameterized role
+    my $metarole = MooseX::Role::OptionShortcuts->meta->generate_role(
+        parameters => { handlers => \%handlers },
+    );
 
-    return $name, @_, %expanded;
+    # apply that role it to the caller's attribute metaclass
+    Moose::Util::MetaRole::apply_metaroles( for => $into, class_metaroles => {
+        attribute => [$metarole->name],
+    });
 }
 
 1;
